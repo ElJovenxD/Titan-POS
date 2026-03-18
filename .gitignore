@@ -1,10 +1,5 @@
-# Ignorar dependencias de Node (Frontend y Raíz)
 node_modules/
-tienda-frontend/node_modules/
-
-# Ignorar compilados de Java (Backend)
-tienda-backend/target/
-*.jar
-
-# Ignorar archivos del sistema operativo
-.DS_Store
+dist/
+build/
+.env
+*.log
