@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
-import { TiendaContext } from '../context/TiendaContext';
+import { TiendaContext } from '../context/TiendaContext'; // <-- Importamos la nube
 
 function HistorialVentas() {
-  const { nombreTienda, iconoTienda } = useContext(TiendaContext);
+  // Bajamos tema, colorPrincipal, nombre e ícono
+  const { nombreTienda, iconoTienda, tema, colorPrincipal } = useContext(TiendaContext);
   const [ventas, setVentas] = useState([]);
   const [detalles, setDetalles] = useState([]);
   const [busqueda, setBusqueda] = useState("");
@@ -33,6 +34,10 @@ function HistorialVentas() {
   const manejarImpresion = () => {
     if (!ventaSeleccionada || detalles.length === 0) return;
 
+    // Si el icono es una imagen base64, no la imprimimos en el ticket para evitar que la impresora térmica falle.
+    // Solo imprimimos el emoji si es que tienes emoji guardado.
+    const iconoParaTicket = !iconoTienda.startsWith('data:image') ? `${iconoTienda} ` : '';
+
     const ventanaTicket = window.open('', '_blank');
     ventanaTicket.document.write(`
       <html>
@@ -48,10 +53,7 @@ function HistorialVentas() {
         </head>
         <body>
           <div class="text-center">
-            <h2 className="fw-bold m-0 text-uppercase">
-              {!iconoTienda.startsWith('data:image') && <span>{iconoTienda} </span>}
-              {nombreTienda}
-            </h2>
+            <h2 style="margin:0; text-transform: uppercase;">${iconoParaTicket}${nombreTienda}</h2>
             <p>¡Gracias por su preferencia!</p>
             <small>Folio: #V-${ventaSeleccionada.id}</small><br>
             <small>${new Date(ventaSeleccionada.fechaVenta).toLocaleString()}</small>
@@ -84,26 +86,33 @@ function HistorialVentas() {
 
   const ventasFiltradas = ventas.filter(v => v.fechaVenta.includes(busqueda));
 
+  // Clases dinámicas dependiendo del tema
+  const cardClass = `card border-secondary shadow-sm ${tema === 'claro' ? 'bg-white' : 'bg-dark text-white'}`;
+  const tableClass = `table table-hover align-middle mb-0 ${tema === 'claro' ? 'table-light' : 'table-dark'}`;
+  const modalClass = `modal-content border-secondary shadow-lg ${tema === 'claro' ? 'bg-white text-dark' : 'bg-dark text-white'}`;
+
   return (
-    <div className="container-fluid">
+    <div className={`container-fluid pb-5 ${tema === 'claro' ? 'text-dark' : 'text-white'}`}>
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="fw-bold m-0 text-white">🧾 Historial de Ventas</h2>
-        <div className="d-flex gap-2 align-items-center bg-dark p-2 rounded shadow-sm">
-          <label className="text-white-50 small mb-0">Filtrar Fecha:</label>
+        <h2 className="fw-bold m-0">🧾 Historial de Ventas</h2>
+        
+        {/* Buscador de fecha con modo dinámico */}
+        <div className={`d-flex gap-2 align-items-center p-2 rounded shadow-sm border-secondary ${tema === 'claro' ? 'bg-light border' : 'bg-dark'}`}>
+          <label className={`small mb-0 fw-bold ${tema === 'claro' ? 'text-secondary' : 'text-white-50'}`}>Filtrar Fecha:</label>
           <input 
             type="date" 
-            className="form-control form-control-sm bg-secondary text-white border-0" 
+            className={`form-control form-control-sm border-secondary ${tema === 'claro' ? 'bg-white text-dark' : 'bg-secondary text-white'}`} 
             onChange={(e) => setBusqueda(e.target.value)} 
           />
         </div>
       </div>
 
-      <div className="card border-0 shadow-sm bg-dark text-white">
+      <div className={cardClass}>
         <div className="table-responsive">
-          <table className="table table-dark table-hover align-middle mb-0">
-            <thead>
-              <tr className="text-secondary">
-                <th>Folio</th>
+          <table className={tableClass}>
+            <thead className={tema === 'claro' ? 'table-secondary text-dark' : 'text-secondary'}>
+              <tr>
+                <th className="ps-4">Folio</th>
                 <th>Fecha y Hora</th>
                 <th className="text-end">Total Cobrado</th>
                 <th className="text-center">Acciones</th>
@@ -112,11 +121,13 @@ function HistorialVentas() {
             <tbody>
               {ventasFiltradas.length > 0 ? ventasFiltradas.map(v => (
                 <tr key={v.id}>
-                  <td className="fw-bold text-success">#V-{v.id}</td>
+                  {/* El Folio usa tu color principal */}
+                  <td className={`ps-4 fw-bold text-${colorPrincipal}`}>#V-{v.id}</td>
                   <td>{new Date(v.fechaVenta).toLocaleString()}</td>
-                  <td className="text-end fw-bold text-white">${v.totalVenta.toFixed(2)}</td>
+                  <td className={`text-end fw-bold ${tema === 'claro' ? 'text-dark' : 'text-white'}`}>${v.totalVenta.toFixed(2)}</td>
                   <td className="text-center">
-                    <button className="btn btn-sm btn-outline-success" onClick={() => verDetalle(v)}>
+                    {/* El botón de detalle usa tu color principal */}
+                    <button className={`btn btn-sm btn-outline-${colorPrincipal} fw-bold`} onClick={() => verDetalle(v)}>
                       👁️ Ver Detalle
                     </button>
                   </td>
@@ -133,16 +144,19 @@ function HistorialVentas() {
 
       {/* MODAL DE DETALLE */}
       {showModal && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content bg-dark text-white border-secondary">
+            <div className={modalClass}>
               <div className="modal-header border-secondary">
-                <h5 className="modal-title fw-bold text-success">Ticket #V-{ventaSeleccionada.id}</h5>
-                <button type="button" className="btn-close btn-close-white" onClick={() => setShowModal(false)}></button>
+                {/* El título del ticket usa tu color principal */}
+                <h5 className={`modal-title fw-bold text-${colorPrincipal}`}>Ticket #V-{ventaSeleccionada.id}</h5>
+                <button type="button" className={`btn-close ${tema === 'claro' ? '' : 'btn-close-white'}`} onClick={() => setShowModal(false)}></button>
               </div>
               <div className="modal-body">
                 <p className="small text-secondary">Fecha: {new Date(ventaSeleccionada.fechaVenta).toLocaleString()}</p>
-                <table className="table table-dark table-sm">
+                
+                {/* Tablita interna del ticket */}
+                <table className={`table table-sm ${tema === 'claro' ? 'table-light' : 'table-dark'}`}>
                   <thead>
                     <tr className="text-secondary">
                       <th>Cant.</th>
@@ -162,12 +176,13 @@ function HistorialVentas() {
                 </table>
                 <div className="d-flex justify-content-between mt-3 border-top border-secondary pt-3">
                   <span className="h5 fw-bold">TOTAL:</span>
-                  <span className="h4 fw-bold text-success">${ventaSeleccionada.totalVenta.toFixed(2)}</span>
+                  <span className={`h4 fw-bold text-${colorPrincipal}`}>${ventaSeleccionada.totalVenta.toFixed(2)}</span>
                 </div>
               </div>
               <div className="modal-footer border-secondary">
-                <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cerrar</button>
-                <button className="btn btn-success fw-bold" onClick={manejarImpresion}>🖨️ Imprimir</button>
+                <button className={`btn ${tema === 'claro' ? 'btn-outline-dark' : 'btn-secondary'}`} onClick={() => setShowModal(false)}>Cerrar</button>
+                {/* Botón de imprimir adaptado al color */}
+                <button className={`btn btn-${colorPrincipal} fw-bold shadow-sm`} onClick={manejarImpresion}>🖨️ Imprimir</button>
               </div>
             </div>
           </div>

@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import { TiendaContext } from '../context/TiendaContext'; // <-- Importamos la nube
 
 function Compras() {
+  // Bajamos el tema y el color principal
+  const { tema, colorPrincipal } = useContext(TiendaContext);
+
   const [productos, setProductos] = useState([]);
   const [proveedores, setProveedores] = useState([]);
   const [filtro, setFiltro] = useState("");
@@ -40,70 +44,83 @@ function Compras() {
     (p.codigoBarras && p.codigoBarras.includes(filtro))
   );
 
+  // Clases dinámicas dependiendo del tema
+  const cardClass = `card border-secondary p-4 h-100 shadow-sm ${tema === 'claro' ? 'bg-white text-dark' : 'bg-dark text-white'}`;
+  const inputClass = `form-control border-secondary ${tema === 'claro' ? 'bg-light text-dark' : 'bg-dark text-white'}`;
+  const selectClass = `form-select border-secondary ${tema === 'claro' ? 'bg-light text-dark' : 'bg-dark text-white'}`;
+
   return (
-    <div className="container-fluid text-white">
+    <div className={`container-fluid pb-5 ${tema === 'claro' ? 'text-dark' : 'text-white'}`}>
       <h2 className="fw-bold mb-4">📦 Registro de Mercancía (Entradas)</h2>
       
       <div className="row g-4">
         {/* BUSCADOR DE PRODUCTOS */}
-        {/* BUSCADOR DE PRODUCTOS */}
         <div className="col-md-6">
-          <div className="card bg-dark border-secondary p-3">
-            <h5 className="text-info mb-3">1. Selecciona el Producto</h5>
+          <div className={cardClass}>
+            {/* El título usa tu color principal */}
+            <h5 className={`mb-3 fw-bold text-${colorPrincipal}`}>1. Selecciona el Producto</h5>
             <input 
               type="text" 
-              className="form-control bg-dark text-white border-secondary mb-3" 
+              className={`${inputClass} mb-3`}
               placeholder="Buscar por nombre o escanear..." 
-              autoFocus /* <-- IMPORTANTE: Pone el cursor ahí al abrir la pantalla */
-              
-              // 1. Aquí controlamos lo que escribes (o lo que escribe la pistola)
+              autoFocus
               onChange={(e) => setFiltro(e.target.value)}
-              
-              // 2. Aquí interceptamos el "Enter" de la pistola
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && e.target.value !== "") {
-                  e.preventDefault(); // Evita que la página recargue por accidente
-                  
-                  // OJO: Asegúrate de que tu array original se llame 'productos' o cambia el nombre aquí abajo
+                  e.preventDefault(); 
                   const productoEscaneado = productos.find(p => p.codigoBarras === e.target.value);
-                  
                   if (productoEscaneado) {
-                    // Si encuentra el código, lo selecciona solito
                     setSeleccion({...seleccion, prod: productoEscaneado});
                     setDatosCompra({...datosCompra, precio: productoEscaneado.precioCompra});
-                    
-                    // Opcional: limpiar la barra de búsqueda después de escanear
                     e.target.value = ""; 
                     setFiltro("");
                   }
                 }
               }}
             />
-            <div className="list-group overflow-auto" style={{maxHeight: '300px'}}>
-              {prodFiltrados.map(p => (
-                <button 
-                  key={p.id} 
-                  className={`list-group-item list-group-item-action ${seleccion.prod?.id === p.id ? 'active' : 'bg-dark text-white border-secondary'}`}
-                  onClick={() => {
-                    setSeleccion({...seleccion, prod: p});
-                    setDatosCompra({...datosCompra, precio: p.precioCompra}); // Sugerir el último precio
-                  }}
-                >
-                  {p.nombre} <small className="text-muted">(Stock: {p.stockActual})</small>
-                </button>
-              ))}
+            <div className="list-group overflow-auto shadow-sm border border-secondary rounded" style={{maxHeight: '300px'}}>
+              {prodFiltrados.map(p => {
+                const isSelected = seleccion.prod?.id === p.id;
+                // Lógica de colores para la lista
+                let btnClass = `list-group-item list-group-item-action d-flex justify-content-between align-items-center `;
+                if (isSelected) {
+                  btnClass += `bg-${colorPrincipal} text-white fw-bold border-${colorPrincipal}`;
+                } else {
+                  btnClass += tema === 'claro' ? 'bg-white text-dark' : 'bg-dark text-white';
+                }
+
+                return (
+                  <button 
+                    key={p.id} 
+                    className={btnClass}
+                    onClick={() => {
+                      setSeleccion({...seleccion, prod: p});
+                      setDatosCompra({...datosCompra, precio: p.precioCompra}); 
+                    }}
+                  >
+                    <span>{p.nombre}</span>
+                    <small className={isSelected ? 'text-white-50' : 'text-secondary'}>
+                      (Stock: {p.stockActual})
+                    </small>
+                  </button>
+                );
+              })}
+              {prodFiltrados.length === 0 && (
+                <div className={`p-3 text-center ${tema === 'claro' ? 'text-muted' : 'text-secondary'}`}>No se encontraron productos.</div>
+              )}
             </div>
           </div>
         </div>
 
         {/* DETALLES DE LA COMPRA */}
         <div className="col-md-6">
-          <div className="card bg-dark border-secondary p-4 h-100">
-            <h5 className="text-info mb-4">2. Datos de la Factura/Nota</h5>
+          <div className={cardClass}>
+            {/* El título usa tu color principal */}
+            <h5 className={`mb-4 fw-bold text-${colorPrincipal}`}>2. Datos de la Factura/Nota</h5>
             
             <div className="mb-3">
-              <label className="form-label">Proveedor</label>
-              <select className="form-select bg-dark text-white border-secondary" onChange={(e) => setSeleccion({...seleccion, provId: e.target.value})}>
+              <label className="form-label fw-bold">Proveedor</label>
+              <select className={selectClass} onChange={(e) => setSeleccion({...seleccion, provId: e.target.value})}>
                 <option value="">Selecciona quién te vende...</option>
                 {proveedores.map(prov => <option key={prov.id} value={prov.id}>{prov.nombreEmpresa}</option>)}
               </select>
@@ -111,19 +128,19 @@ function Compras() {
 
             <div className="row">
               <div className="col-6 mb-3">
-                <label className="form-label">Cantidad que llegó</label>
+                <label className="form-label fw-bold">Cantidad que llegó</label>
                 <input 
                   type="number" 
-                  className="form-control bg-dark text-white border-secondary" 
+                  className={inputClass}
                   value={datosCompra.cantidad}
                   onChange={(e) => setDatosCompra({...datosCompra, cantidad: e.target.value})}
                 />
               </div>
               <div className="col-6 mb-3">
-                <label className="form-label">Costo Unitario ($)</label>
+                <label className="form-label fw-bold">Costo Unitario ($)</label>
                 <input 
                   type="number" 
-                  className="form-control bg-dark text-white border-secondary" 
+                  className={inputClass}
                   value={datosCompra.precio}
                   onChange={(e) => setDatosCompra({...datosCompra, precio: e.target.value})}
                 />
@@ -131,10 +148,12 @@ function Compras() {
             </div>
 
             <div className="mt-auto">
-              <div className="alert alert-info py-2 small">
-                Al guardar, el stock de <b>{seleccion.prod?.nombre || '---'}</b> subirá automáticamente.
+              {/* La alerta toma el color principal sutilmente */}
+              <div className={`alert alert-${colorPrincipal} bg-opacity-10 py-2 small border-${colorPrincipal}`}>
+                Al guardar, el stock de <b className={`text-${colorPrincipal}`}>{seleccion.prod?.nombre || '---'}</b> subirá automáticamente.
               </div>
-              <button className="btn btn-info w-100 fw-bold py-3" onClick={ejecutarCompra}>
+              {/* El botón gigante toma tu color */}
+              <button className={`btn btn-${colorPrincipal} w-100 fw-bold py-3 shadow-sm`} onClick={ejecutarCompra}>
                 📥 REGISTRAR ENTRADA
               </button>
             </div>

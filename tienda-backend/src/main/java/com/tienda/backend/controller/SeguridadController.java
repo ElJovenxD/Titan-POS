@@ -27,6 +27,31 @@ public class SeguridadController {
         return configRepo.findById(1L).orElseThrow(() -> new RuntimeException("Configuración no encontrada"));
     }
 
+    // --- NUEVO: ASISTENTE DE CONFIGURACIÓN INICIAL ---
+    @GetMapping("/estado")
+    public boolean verificarEstado() {
+        // Si hay más de 0 filas en la tabla, significa que ya se configuró
+        return configRepo.count() > 0;
+    }
+
+    @PostMapping("/inicial")
+    public ResponseEntity<?> configuracionInicial(@RequestBody Map<String, String> datos) {
+        if (configRepo.count() > 0) {
+            return ResponseEntity.badRequest().body(java.util.Collections.singletonMap("error", "El sistema ya está configurado."));
+        }
+
+        Configuracion config = new Configuracion();
+        config.setNombreTienda(datos.get("nombreTienda"));
+        config.setPinActual(datos.get("pinActual"));
+        config.setCorreoAlertas(datos.get("correoAlertas"));
+        config.setIconoTienda("🏪"); // Valores por defecto
+        config.setTema("oscuro");
+        config.setColorPrincipal("success");
+
+        configRepo.save(config);
+        return ResponseEntity.ok(java.util.Collections.singletonMap("mensaje", "¡Sistema configurado con éxito!"));
+    }
+
     @PostMapping("/verificar")
     public boolean verificarPin(@RequestBody Map<String, String> payload) {
         Configuracion config = getConfiguracion();
@@ -46,14 +71,17 @@ public class SeguridadController {
             return ResponseEntity.badRequest().body(java.util.Collections.singletonMap("error", "El nuevo PIN debe tener 4 dígitos."));
         }
 
-        // Actualizamos y GUARDAMOS en la Base de Datos
+        // 1. Guardamos el nuevo PIN
         config.setPinActual(pinNuevo);
         configRepo.save(config);
 
-        enviarCorreoAlerta(pinNuevo, config.getCorreoAlertas());
+        new Thread(() -> {
+            enviarCorreoAlerta(pinNuevo, config.getCorreoAlertas());
+        }).start();
 
         return ResponseEntity.ok(java.util.Collections.singletonMap("mensaje", "PIN actualizado con éxito. Revisa tu correo."));
     }
+
 
     @PostMapping("/actualizar-correo")
     public ResponseEntity<?> actualizarCorreo(@RequestBody Map<String, String> datos) {
@@ -72,18 +100,25 @@ public class SeguridadController {
     }
 
     private void enviarCorreoAlerta(String nuevoPin, String correoDestino) {
+        // Validación extra: Si no hay correo, no intentamos enviar para evitar errores
+        if (correoDestino == null || correoDestino.isEmpty()) {
+            System.out.println("No hay correo configurado para enviar la alerta.");
+            return;
+        }
+
         try {
             SimpleMailMessage mensaje = new SimpleMailMessage();
             mensaje.setTo(correoDestino);
-            mensaje.setSubject("🚨 ALERTA: Cambio de PIN en Los Chilangos");
+            mensaje.setSubject("🚨 ALERTA: Cambio de PIN en " + getConfiguracion().getNombreTienda());
             mensaje.setText("Hola,\n\n" +
-                    "El PIN de acceso al sistema de Punto de Venta ha sido modificado el " + LocalDateTime.now() + ".\n\n" +
-                    "El nuevo PIN de seguridad es: " + nuevoPin + "\n\n" +
-                    "Si tú no hiciste este cambio, revisa el sistema inmediatamente.");
+                    "El PIN de acceso al sistema ha sido modificado exitosamente.\n\n" +
+                    "Nuevo PIN: " + nuevoPin + "\n" +
+                    "Fecha del cambio: " + LocalDateTime.now() + "\n\n" +
+                    "Si no fuiste tú, contacta a soporte técnico.");
 
             mailSender.send(mensaje);
         } catch (Exception e) {
-            System.out.println("No se pudo enviar el correo de alerta: " + e.getMessage());
+            System.err.println("Error al enviar correo: " + e.getMessage());
         }
     }
 
@@ -94,7 +129,9 @@ public class SeguridadController {
         return ResponseEntity.ok(Map.of(
                 "nombreTienda", config.getNombreTienda() != null ? config.getNombreTienda() : "Los Chilangos",
                 "correoAlertas", config.getCorreoAlertas(),
-                "iconoTienda", config.getIconoTienda() != null ? config.getIconoTienda() : "🏪"
+                "iconoTienda", config.getIconoTienda() != null ? config.getIconoTienda() : "🏪",
+                "tema", config.getTema() != null ? config.getTema() : "oscuro",
+                "colorPrincipal", config.getColorPrincipal() != null ? config.getColorPrincipal() : "success"
         ));
     }
 
@@ -114,5 +151,18 @@ public class SeguridadController {
         configRepo.save(config);
 
         return ResponseEntity.ok(java.util.Collections.singletonMap("mensaje", "Datos del negocio actualizados."));
+    }
+
+    // --- NUEVO: ACTUALIZAR APARIENCIA ---
+    @PostMapping("/actualizar-apariencia")
+    public ResponseEntity<?> actualizarApariencia(@RequestBody Map<String, String> datos) {
+        System.out.println("¡SÍ LLEGÓ A JAVA! Color pedido: " + datos.get("colorPrincipal"));
+
+        Configuracion config = getConfiguracion();
+        config.setTema(datos.get("tema"));
+        config.setColorPrincipal(datos.get("colorPrincipal"));
+        configRepo.save(config);
+
+        return ResponseEntity.ok(java.util.Collections.singletonMap("mensaje", "Apariencia actualizada correctamente."));
     }
 }

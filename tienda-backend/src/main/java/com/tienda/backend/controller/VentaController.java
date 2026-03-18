@@ -75,20 +75,18 @@ public class VentaController {
     public Map<String, Object> obtenerVentasHoy() {
         LocalDate hoy = LocalDate.now();
 
-        // Cambié "fecha_venta" por "fecha" y "venta_id" por "venta_id" (revisa estos nombres en tu BD)
-        // También añadí el alias 'total_ventas' y 'total_ganancia' para que React los reciba bien
+        // CORRECCIÓN: detalle_ventas y fecha_venta
         String sql = "SELECT " +
                 "COALESCE(SUM(vd.precio_unitario * vd.cantidad), 0) as total_ventas, " +
                 "COALESCE(SUM((vd.precio_unitario - p.precio_compra) * vd.cantidad), 0) as total_ganancia " +
                 "FROM ventas v " +
-                "JOIN venta_detalles vd ON v.id = vd.venta_id " +
+                "JOIN detalle_ventas vd ON v.id = vd.venta_id " +
                 "JOIN productos p ON vd.producto_id = p.id " +
-                "WHERE CAST(v.fecha AS DATE) = ?"; // <-- Si tu columna se llama fecha_venta, cámbialo aquí
+                "WHERE CAST(v.fecha_venta AS DATE) = ?";
 
         try {
             return jdbcTemplate.queryForMap(sql, hoy);
         } catch (Exception e) {
-            // Esto imprimirá el error real en la consola de IntelliJ
             System.out.println("ERROR EN SQL: " + e.getMessage());
             Map<String, Object> errorMap = new HashMap<>();
             errorMap.put("total_ventas", 0);
@@ -97,28 +95,25 @@ public class VentaController {
         }
     }
 
-    /**
-     * Obtiene los totales de los últimos 7 días (Para la Gráfica).
-     */
     @GetMapping("/semana")
     public List<Map<String, Object>> obtenerVentasSemana() {
-        // SQL optimizado para traer fecha, total de venta y ganancia real de los últimos 7 días
+        // CORRECCIÓN: detalle_ventas y fecha_venta
         String sql = "SELECT " +
-                "CAST(v.fecha AS DATE) as fecha, " + // Cambia 'v.fecha' por 'v.fecha_venta' si es necesario
+                "CAST(v.fecha_venta AS DATE) as fecha, " +
                 "COALESCE(SUM(vd.precio_unitario * vd.cantidad), 0) as total, " +
                 "COALESCE(SUM((vd.precio_unitario - p.precio_compra) * vd.cantidad), 0) as ganancia " +
                 "FROM ventas v " +
-                "JOIN venta_detalles vd ON v.id = vd.venta_id " +
+                "JOIN detalle_ventas vd ON v.id = vd.venta_id " +
                 "JOIN productos p ON vd.producto_id = p.id " +
-                "WHERE v.fecha >= CURRENT_DATE - INTERVAL '7 days' " +
-                "GROUP BY CAST(v.fecha AS DATE) " +
+                "WHERE v.fecha_venta >= CURRENT_DATE - INTERVAL '7 days' " +
+                "GROUP BY CAST(v.fecha_venta AS DATE) " +
                 "ORDER BY fecha ASC";
 
         try {
             return jdbcTemplate.queryForList(sql);
         } catch (Exception e) {
             System.out.println("ERROR EN GRAFICA SEMANAL: " + e.getMessage());
-            return new ArrayList<>(); // Retornamos lista vacía para que React no truene
+            return new ArrayList<>();
         }
     }
 

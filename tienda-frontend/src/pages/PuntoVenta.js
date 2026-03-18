@@ -6,7 +6,8 @@ import TicketVenta from '../components/TicketVenta';
 import { TiendaContext } from '../context/TiendaContext';
 
 function PuntoVenta() {
-  const { nombreTienda } = useContext(TiendaContext);
+  // 1. Bajamos el tema y el colorPrincipal de la nube
+  const { nombreTienda, tema, colorPrincipal } = useContext(TiendaContext);
   const [productos, setProductos] = useState([]);
   const [carrito, setCarrito] = useState([]);
   const [filtro, setFiltro] = useState("");
@@ -15,7 +16,6 @@ function PuntoVenta() {
   
   const componentRef = useRef();
 
-  // Cargar productos al iniciar
   const cargarProductos = () => {
     axios.get('http://localhost:8080/api/productos')
       .then(res => setProductos(res.data))
@@ -57,14 +57,12 @@ function PuntoVenta() {
   };
 
   const finalizarVenta = async () => {
-    // 1. Enviar SOLO el arreglo que espera el Backend
     const detallesVenta = carrito.map(item => ({
       productoId: item.id,
       cantidad: item.cantidad
     }));
 
     try {
-      // 2. Pasamos 'detallesVenta' directamente
       const res = await axios.post('http://localhost:8080/api/ventas', detallesVenta);
       const ventaExitosa = res.data;
 
@@ -100,49 +98,39 @@ function PuntoVenta() {
     (p.codigoBarras && p.codigoBarras.includes(filtro))
   );
 
+  // Clases dinámicas dependiendo del tema
+  const cardClass = `card shadow-sm border-secondary p-3 mb-4 ${tema === 'claro' ? 'bg-white' : 'bg-dark text-white'}`;
+  const inputClass = `form-control form-control-lg mb-3 shadow-sm ${tema === 'claro' ? 'bg-light text-dark' : 'bg-black text-white border-secondary'}`;
+  const listGroupClass = `list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 ${tema === 'claro' ? 'bg-white text-dark' : 'bg-dark text-white border-secondary'}`;
+
   return (
-    <div className="container-fluid py-4">
-      <h2 className="mb-4 fw-bold text-dark">🛒 Punto de Venta - {nombreTienda}</h2>
+    <div className={`container-fluid py-4 ${tema === 'claro' ? 'text-dark' : 'text-white'}`}>
+      <h2 className="mb-4 fw-bold">🛒 Punto de Venta - {nombreTienda}</h2>
       
       <div className="row g-4">
         {/* BUSCADOR Y LISTA DE PRODUCTOS */}
         <div className="col-md-7">
-          <div className="card shadow-sm border-0 p-3 mb-4 bg-white">
+          <div className={cardClass}>
             <label className="form-label fw-bold">Buscar Producto</label>
             <input 
               type="text" 
-              className="form-control form-control-lg mb-3 shadow-sm" 
+              className={inputClass} 
               placeholder="Nombre o escanea código..." 
               value={filtro}
               onChange={(e) => setFiltro(e.target.value)}
               onKeyUp={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
-
                   const valor = e.target.value.trim().replace(/\r|\n/g, "");
-
-                  let productoEscaneado = productos.find(p =>
-                    p.codigoBarras && String(p.codigoBarras) === valor
-                  );
-
+                  let productoEscaneado = productos.find(p => p.codigoBarras && String(p.codigoBarras) === valor);
                   if (!productoEscaneado) {
-                    productoEscaneado = productos.find(p =>
-                      p.nombre.toLowerCase() === valor.toLowerCase()
-                    );
+                    productoEscaneado = productos.find(p => p.nombre.toLowerCase() === valor.toLowerCase());
                   }
-
                   if (productoEscaneado) {
                     agregarAlCarrito(productoEscaneado);
                     setFiltro("");
                   } else {
-                    Swal.fire({
-                      toast: true,
-                      position: "top-end",
-                      icon: "warning",
-                      title: "Producto no encontrado",
-                      showConfirmButton: false,
-                      timer: 1500
-                    });
+                    Swal.fire({ toast: true, position: "top-end", icon: "warning", title: "Producto no encontrado", showConfirmButton: false, timer: 1500 });
                     setFiltro("");
                   }
                 }
@@ -155,7 +143,7 @@ function PuntoVenta() {
                 <button 
                   key={p.id} 
                   onClick={() => agregarAlCarrito(p)} 
-                  className="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3"
+                  className={listGroupClass}
                 >
                   <div>
                     <div className="fw-bold">{p.nombre}</div>
@@ -163,7 +151,8 @@ function PuntoVenta() {
                       Existencia: {p.stockActual} pz
                     </small>
                   </div>
-                  <span className="badge bg-success fs-6 shadow-sm">${p.precioVenta.toFixed(2)}</span>
+                  {/* Etiqueta de precio con tu color principal */}
+                  <span className={`badge bg-${colorPrincipal} fs-6 shadow-sm`}>${p.precioVenta.toFixed(2)}</span>
                 </button>
               )) : <div className="text-center p-4 text-muted">No hay productos que coincidan.</div>}
             </div>
@@ -172,8 +161,9 @@ function PuntoVenta() {
 
         {/* CARRITO / LISTA DE COBRO */}
         <div className="col-md-5">
-          <div className="card shadow-sm border-0 h-100 d-flex flex-column bg-white">
-            <div className="card-header bg-dark text-white fw-bold py-3">
+          <div className={`card shadow-sm border-secondary h-100 d-flex flex-column ${tema === 'claro' ? 'bg-white' : 'bg-dark'}`}>
+            {/* Cabecera del carrito con tu color principal */}
+            <div className={`card-header text-white fw-bold py-3 bg-${colorPrincipal}`}>
               📋 Lista de Cobro
             </div>
             <div className="card-body flex-grow-1 overflow-auto p-0" style={{minHeight: '300px'}}>
@@ -183,8 +173,8 @@ function PuntoVenta() {
                    <p>El carrito está vacío</p>
                 </div>
               ) : (
-                <table className="table table-hover align-middle mb-0">
-                  <thead className="bg-light">
+                <table className={`table table-hover align-middle mb-0 ${tema === 'claro' ? 'table-light' : 'table-dark'}`}>
+                  <thead className={tema === 'claro' ? 'table-secondary text-dark' : 'text-secondary'}>
                     <tr>
                       <th className="ps-3">Cant.</th>
                       <th>Producto</th>
@@ -195,9 +185,10 @@ function PuntoVenta() {
                   <tbody>
                     {carrito.map(item => (
                       <tr key={item.id}>
-                        <td className="ps-3">{item.cantidad}</td>
-                        <td className="small fw-bold">{item.nombre}</td>
-                        <td className="text-end fw-bold text-success pe-3">
+                        <td className="ps-3 fw-bold">{item.cantidad}</td>
+                        <td className="small">{item.nombre}</td>
+                        {/* El subtotal de cada producto usa tu color */}
+                        <td className={`text-end fw-bold text-${colorPrincipal} pe-3`}>
                           ${(item.precioVenta * item.cantidad).toFixed(2)}
                         </td>
                         <td className="text-center">
@@ -209,13 +200,18 @@ function PuntoVenta() {
                 </table>
               )}
             </div>
-            <div className="card-footer bg-light p-4 border-0">
+            
+            {/* Pie de la tarjeta donde está el Total */}
+            <div className={`card-footer p-4 border-0 ${tema === 'claro' ? 'bg-light' : 'bg-secondary bg-opacity-25'}`}>
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <span className="h4 m-0 fw-bold">TOTAL:</span>
-                <span className="h2 m-0 text-success fw-bold">${calcularTotal().toFixed(2)}</span>
+                <span className={`h4 m-0 fw-bold ${tema === 'claro' ? 'text-dark' : 'text-white'}`}>TOTAL:</span>
+                {/* El TOTAL gigante en tu color */}
+                <span className={`h2 m-0 fw-bold text-${colorPrincipal}`}>${calcularTotal().toFixed(2)}</span>
               </div>
+              
+              {/* El botón de cobro usa tu color principal */}
               <button 
-                className="btn btn-success btn-lg w-100 fw-bold py-3 shadow" 
+                className={`btn btn-${colorPrincipal} btn-lg w-100 fw-bold py-3 shadow`} 
                 onClick={finalizarVenta}
                 disabled={carrito.length === 0}
               >

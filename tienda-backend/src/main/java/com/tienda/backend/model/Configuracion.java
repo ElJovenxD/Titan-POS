@@ -15,7 +15,19 @@ public class Configuracion {
 
     // NUEVA VARIABLE
     private String nombreTienda;
+
+    @Column(columnDefinition = "TEXT")
     private String iconoTienda;
+    private String tema;
+    @Column(name = "color_principal")
+    private String colorPrincipal;
+
+    public String getTema() { return tema; }
+    public void setTema(String tema) { this.tema = tema; }
+
+    public String getColorPrincipal() { return colorPrincipal; }
+    public void setColorPrincipal(String colorPrincipal) { this.colorPrincipal = colorPrincipal; }
+
 
     public String getIconoTienda() { return iconoTienda; }
     public void setIconoTienda(String iconoTienda) { this.iconoTienda = iconoTienda; }

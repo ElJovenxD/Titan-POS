@@ -11,3 +11,28 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* --- TEMA EXCLUSIVO: NARANJA MICHI 🐈 --- */
+.bg-orange { background-color: #ff851b !important; color: white !important; }
+.text-orange { color: #ff851b !important; }
+.border-orange { border-color: #ff851b !important; }
+
+.btn-orange { 
+  background-color: #ff851b !important; 
+  color: white !important; 
+  border-color: #ff851b !important; 
+}
+.btn-orange:hover { 
+  background-color: #e67312 !important; /* Un naranja un poco más oscuro al pasar el mouse */
+  color: white !important; 
+}
+
+.btn-outline-orange { 
+  color: #ff851b !important; 
+  border-color: #ff851b !important; 
+  background-color: transparent !important; 
+}
+.btn-outline-orange:hover { 
+  background-color: #ff851b !important; 
+  color: white !important; 
+}

@@ -1,254 +1,230 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import { TiendaContext } from '../context/TiendaContext';
 
 function Ajustes() {
-  const [seccionActiva, setSeccionActiva] = useState('negocio'); // Que empiece en negocio
+  // Extraemos las funciones 'set' del contexto para actualizar la UI en tiempo real
+  const { tema, colorPrincipal, setTema, setColorPrincipal, nombreTienda, iconoTienda } = useContext(TiendaContext);
 
-  // Estados para la Seguridad
+  const [seccionActiva, setSeccionActiva] = useState('negocio');
+
+  // Estados locales para los formularios
   const [pinActual, setPinActual] = useState('');
   const [pinNuevo, setPinNuevo] = useState('');
   const [correoAlertas, setCorreoAlertas] = useState('');
+  const [nombreTiendaLocal, setNombreTiendaLocal] = useState('');
+  const [iconoTiendaLocal, setIconoTiendaLocal] = useState('🏪');
 
-  const [nombreTienda, setNombreTienda] = useState('');
-  const [iconoTienda, setIconoTienda] = useState('🏪'); // <-- NUEVO
+  // Estados locales para la pestaña de apariencia (previsualización)
+  const [temaLocal, setTemaLocal] = useState('oscuro');
+  const [colorLocal, setColorLocal] = useState('success');
 
   const opcionesIconos = ['🏪', '🛒', '🛍️', '🍎', '🥩', '🍺', '💊', '🔧', '📱', '🎮'];
-  // --- FUNCIÓN PARA LEER LA IMAGEN ---
-  const handleSubirLogo = (e) => {
-    const archivo = e.target.files[0];
-    if (!archivo) return;
 
-    // Limitar a 1 MB (1,048,576 bytes)
-    if (archivo.size > 1048576) {
-      Swal.fire('Imagen muy pesada', 'Por favor elige un logo que pese menos de 1 MB.', 'warning');
-      e.target.value = null; // Limpiar el input
-      return;
-    }
-
-    // Convertir la imagen a texto (Base64)
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setIconoTienda(reader.result); // Guardamos el texto gigante en el mismo estado
-    };
-    reader.readAsDataURL(archivo);
-  };
-
-  // --- NUEVO: CARGAR DATOS ACTUALES AL ABRIR LA PANTALLA ---
   useEffect(() => {
     axios.get('http://localhost:8080/api/seguridad/obtener')
       .then(res => {
-        setNombreTienda(res.data.nombreTienda);
-        setIconoTienda(res.data.iconoTienda); // <-- NUEVO
+        setNombreTiendaLocal(res.data.nombreTienda);
+        setIconoTiendaLocal(res.data.iconoTienda);
+        setTemaLocal(res.data.tema || 'oscuro');
+        setColorLocal(res.data.colorPrincipal || 'success');
+        setCorreoAlertas(res.data.correoAlertas || '');
       })
       .catch(err => console.error("Error al cargar la configuración", err));
   }, []);
 
-  // --- NUEVO: FUNCIÓN GUARDAR NEGOCIO ---
+  // 1. Guardar Datos del Negocio (Requiere recarga para actualizar Sidebar/Login)
   const handleGuardarNegocio = async () => {
-    if (!nombreTienda.trim()) {
-      Swal.fire('Atención', 'El nombre de la tienda no puede estar vacío.', 'warning');
-      return;
-    }
-
+    if (!nombreTiendaLocal.trim()) return Swal.fire('Atención', 'El nombre no puede estar vacío.', 'warning');
     try {
-      const respuesta = await axios.post('http://localhost:8080/api/seguridad/actualizar-negocio', {
-        nombreTienda: nombreTienda,
-        iconoTienda: iconoTienda // <--- ¡ESTO ERA LO QUE FALTABA!
+      const res = await axios.post('http://localhost:8080/api/seguridad/actualizar-negocio', { 
+        nombreTienda: nombreTiendaLocal, 
+        iconoTienda: iconoTiendaLocal 
       });
-      
-      Swal.fire({
-        title: '¡Actualizado!',
-        text: respuesta.data.mensaje,
-        icon: 'success',
-        timer: 1500,
-        showConfirmButton: false
-      }).then(() => {
-        // Recargamos la página rápidamente para que el menú izquierdo se actualice con el nuevo nombre
-        window.location.reload();
-      });
+      Swal.fire({ title: '¡Actualizado!', text: res.data.mensaje, icon: 'success', timer: 1500, showConfirmButton: false })
+        .then(() => window.location.reload());
     } catch (error) {
-      Swal.fire('Error', 'No se pudo guardar el nombre del negocio.', 'error');
+      Swal.fire('Error', 'No se pudo guardar el negocio.', 'error');
     }
   };
 
-  // --- FUNCIÓN: CAMBIAR PIN ---
+  // 2. Cambiar PIN (Cierra sesión por seguridad)
   const handleCambiarPin = async () => {
-    if (pinActual.length !== 4 || pinNuevo.length !== 4) {
-      Swal.fire('Atención', 'Ambos PINs deben tener exactamente 4 números.', 'warning');
-      return;
-    }
-
+    if (pinActual.length !== 4 || pinNuevo.length !== 4) return Swal.fire('Atención', 'Deben ser 4 números.', 'warning');
     try {
-      const respuesta = await axios.post('http://localhost:8080/api/seguridad/cambiar-pin', {
-        pinActual: pinActual,
-        pinNuevo: pinNuevo
+      const res = await axios.post('http://localhost:8080/api/seguridad/cambiar-pin', { pinActual, pinNuevo });
+      Swal.fire({
+        title: '¡PIN Cambiado!',
+        text: 'Por seguridad, el sistema se bloqueará. Ingresa con tu nuevo PIN.',
+        icon: 'success'
+      }).then(() => {
+        // Forzamos la recarga para que el estado de 'bloqueado' en App.js vuelva a true
+        window.location.reload(); 
       });
-      
-      Swal.fire('¡Éxito!', respuesta.data.mensaje, 'success');
-      setPinActual(''); 
-      setPinNuevo('');
     } catch (error) {
-      if (error.response) {
-        Swal.fire('Error', error.response.data.error, 'error');
-      } else {
-        Swal.fire('Error de conexión', 'No se pudo contactar al servidor.', 'error');
-      }
+      Swal.fire('Error', error.response?.data?.error || 'Error de servidor', 'error');
     }
   };
 
-  // --- FUNCIÓN: GUARDAR CORREO ---
+  // 3. Guardar Correo
   const handleGuardarCorreo = async () => {
-    if (!correoAlertas.includes('@')) {
-      Swal.fire('Atención', 'Ingresa un correo electrónico válido.', 'warning');
-      return;
-    }
-
+    if (!correoAlertas.includes('@')) return Swal.fire('Atención', 'Ingresa un correo válido.', 'warning');
     try {
-      const respuesta = await axios.post('http://localhost:8080/api/seguridad/actualizar-correo', {
-        correo: correoAlertas
-      });
-      
-      Swal.fire('¡Actualizado!', respuesta.data.mensaje, 'success');
-      setCorreoAlertas('');
+      const res = await axios.post('http://localhost:8080/api/seguridad/actualizar-correo', { correo: correoAlertas });
+      Swal.fire('¡Actualizado!', res.data.mensaje, 'success');
     } catch (error) {
       Swal.fire('Error', 'No se pudo guardar el correo.', 'error');
     }
   };
 
+  // 4. Guardar Apariencia (SIN RECARGAR - Cambio instantáneo)
+  const handleGuardarApariencia = async () => {
+    try {
+      await axios.post('http://localhost:8080/api/seguridad/actualizar-apariencia', {
+        tema: temaLocal, colorPrincipal: colorLocal
+      });
+      
+      // Actualizamos el Contexto Global inmediatamente
+      setTema(temaLocal);
+      setColorPrincipal(colorLocal);
+
+      Swal.fire({ 
+        toast: true, 
+        position: 'top-end', 
+        title: 'Apariencia aplicada 🐈🧡', 
+        icon: 'success', 
+        timer: 3000, 
+        showConfirmButton: false 
+      });
+    } catch (error) {
+      Swal.fire('Error', 'No se pudo guardar la apariencia.', 'error');
+    }
+  };
+
+  const handleSubirLogo = (e) => {
+    const archivo = e.target.files[0];
+    if (!archivo) return;
+    if (archivo.size > 1048576) {
+      Swal.fire('Imagen muy pesada', 'Máximo 1 MB.', 'warning');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => setIconoTiendaLocal(reader.result);
+    reader.readAsDataURL(archivo);
+  };
+
+  // Clases dinámicas
+  const cardClass = `card shadow-sm border-secondary ${tema === 'claro' ? 'bg-white text-dark' : 'bg-dark text-white'}`;
+  const inputClass = `form-control form-control-lg border-secondary ${tema === 'claro' ? 'bg-light text-dark' : 'bg-dark text-white'}`;
+  const inputPinClass = `form-control text-center fs-4 border-secondary ${tema === 'claro' ? 'bg-light text-dark' : 'bg-dark text-white'}`;
+  
+  const getMenuBtnClass = (seccion) => {
+    if (seccionActiva === seccion) {
+      return `list-group-item list-group-item-action fw-bold active bg-${colorPrincipal} border-${colorPrincipal} text-white`;
+    }
+    return `list-group-item list-group-item-action fw-bold ${tema === 'claro' ? 'bg-light text-secondary' : 'bg-dark text-secondary border-secondary'}`;
+  };
+
   return (
-    <div className="container p-4 text-white">
+    <div className={`container-fluid pb-5 ${tema === 'claro' ? 'text-dark' : 'text-white'}`}>
       <h2 className="fw-bold mb-4">⚙️ Configuración del Sistema</h2>
 
       <div className="row">
-        {/* MENÚ LATERAL DE AJUSTES */}
         <div className="col-md-3 mb-4">
           <div className="list-group shadow-sm">
-            <button 
-              className={`list-group-item list-group-item-action fw-bold ${seccionActiva === 'negocio' ? 'active bg-success border-success text-white' : 'bg-dark text-secondary border-secondary'}`}
-              onClick={() => setSeccionActiva('negocio')}
-            >
-              🏪 Datos del Negocio
-            </button>
-            <button 
-              className={`list-group-item list-group-item-action fw-bold ${seccionActiva === 'seguridad' ? 'active bg-success border-success text-white' : 'bg-dark text-secondary border-secondary'}`}
-              onClick={() => setSeccionActiva('seguridad')}
-            >
-              🔒 Seguridad
-            </button>
-            <button 
-              className={`list-group-item list-group-item-action fw-bold ${seccionActiva === 'apariencia' ? 'active bg-success border-success text-white' : 'bg-dark text-secondary border-secondary'}`}
-              onClick={() => setSeccionActiva('apariencia')}
-            >
-              🎨 Apariencia
-            </button>
+            <button className={getMenuBtnClass('negocio')} onClick={() => setSeccionActiva('negocio')}>🏪 Datos del Negocio</button>
+            <button className={getMenuBtnClass('seguridad')} onClick={() => setSeccionActiva('seguridad')}>🔒 Seguridad</button>
+            <button className={getMenuBtnClass('apariencia')} onClick={() => setSeccionActiva('apariencia')}>🎨 Apariencia</button>
           </div>
         </div>
 
-        {/* CONTENIDO DE LOS AJUSTES */}
         <div className="col-md-9">
-          <div className="card shadow-sm border-secondary bg-dark text-white">
+          <div className={cardClass}>
             <div className="card-body p-4">
 
               {seccionActiva === 'negocio' && (
                 <div>
-                  <h4 className="mb-4 text-success fw-bold">Información del Establecimiento</h4>
+                  <h4 className={`mb-4 fw-bold text-${colorPrincipal}`}>Información del Establecimiento</h4>
                   <div className="mb-3">
-                    <label className="form-label text-secondary">Nombre de la Tienda</label>
-                    <input type="text" className="form-control form-control-lg bg-dark text-white border-secondary" value={nombreTienda} onChange={(e) => setNombreTienda(e.target.value)} />
+                    <label className="form-label text-secondary fw-bold">Nombre de la Tienda</label>
+                    <input type="text" className={inputClass} value={nombreTiendaLocal} onChange={(e) => setNombreTiendaLocal(e.target.value)} />
                   </div>
                   
                   <div className="mb-4">
-                    <label className="form-label text-secondary">Ícono / Logo del Negocio</label>
-                    
-                    {/* VISTA PREVIA */}
-                    <div className="mb-3 p-3 bg-black rounded text-center border border-secondary" style={{width: 'fit-content'}}>
-                      {iconoTienda.startsWith('data:image') ? (
-                        <img src={iconoTienda} alt="Logo" style={{ width: '80px', height: '80px', objectFit: 'contain' }} />
+                    <label className="form-label text-secondary fw-bold">Ícono / Logo del Negocio</label>
+                    <div className={`mb-3 p-3 rounded text-center border border-secondary ${tema === 'claro' ? 'bg-light' : 'bg-black'}`} style={{width: 'fit-content'}}>
+                      {iconoTiendaLocal.startsWith('data:image') ? (
+                        <img src={iconoTiendaLocal} alt="Logo" style={{ width: '80px', height: '80px', objectFit: 'contain' }} />
                       ) : (
-                        <span style={{ fontSize: '60px' }}>{iconoTienda}</span>
+                        <span style={{ fontSize: '60px' }}>{iconoTiendaLocal}</span>
                       )}
                     </div>
-
-                    {/* BOTÓN PARA SUBIR IMAGEN */}
-                    <input 
-                      type="file" 
-                      className="form-control bg-dark text-white border-secondary mb-3 w-50" 
-                      accept="image/png, image/jpeg" 
-                      onChange={handleSubirLogo}
-                    />
-
-                    <small className="text-secondary d-block mb-2">O elige un emoji rápido:</small>
-                    <div className="d-flex flex-wrap gap-2 mb-2">
+                    <input type="file" className={inputClass} accept="image/*" onChange={handleSubirLogo} />
+                    <div className="d-flex flex-wrap gap-2 mt-3">
                       {opcionesIconos.map(icono => (
-                        <button 
-                          key={icono} 
-                          className={`btn fs-4 ${iconoTienda === icono ? 'btn-success shadow' : 'btn-outline-secondary'}`}
-                          onClick={() => setIconoTienda(icono)}
-                        >
+                        <button key={icono} className={`btn fs-4 ${iconoTiendaLocal === icono ? `btn-${colorPrincipal} shadow` : 'btn-outline-secondary'}`} onClick={() => setIconoTiendaLocal(icono)}>
                           {icono}
                         </button>
                       ))}
                     </div>
                   </div>
-
-                  <button onClick={handleGuardarNegocio} className="btn btn-success px-4 fw-bold shadow-sm">Guardar Cambios</button>
+                  <button onClick={handleGuardarNegocio} className={`btn btn-${colorPrincipal} px-4 fw-bold shadow-sm`}>Guardar Datos</button>
                 </div>
               )}
 
               {seccionActiva === 'seguridad' && (
                 <div>
-                  <h4 className="mb-4 text-success fw-bold">Seguridad y Alertas</h4>
-                  
-                  <h6 className="fw-bold mt-4">Cambio de PIN de la Caja</h6>
+                  <h4 className={`mb-4 fw-bold text-${colorPrincipal}`}>Seguridad y Alertas</h4>
                   <div className="row mb-3">
                     <div className="col-md-4">
-                      <label className="form-label text-secondary">PIN Actual</label>
-                      <input 
-                        type="password" 
-                        className="form-control text-center fs-4 bg-dark text-white border-secondary" 
-                        maxLength="4"
-                        value={pinActual}
-                        onChange={(e) => setPinActual(e.target.value.replace(/\D/g, ''))}
-                      />
+                      <label className="form-label text-secondary fw-bold">PIN Actual</label>
+                      <input type="password" className={inputPinClass} maxLength="4" value={pinActual} onChange={(e) => setPinActual(e.target.value.replace(/\D/g, ''))} />
                     </div>
                     <div className="col-md-4">
-                      <label className="form-label text-secondary">Nuevo PIN</label>
-                      <input 
-                        type="password" 
-                        className="form-control text-center fs-4 bg-dark text-white border-secondary" 
-                        maxLength="4"
-                        value={pinNuevo}
-                        onChange={(e) => setPinNuevo(e.target.value.replace(/\D/g, ''))}
-                      />
+                      <label className="form-label text-secondary fw-bold">Nuevo PIN</label>
+                      <input type="password" className={inputPinClass} maxLength="4" value={pinNuevo} onChange={(e) => setPinNuevo(e.target.value.replace(/\D/g, ''))} />
                     </div>
                   </div>
-                  <button onClick={handleCambiarPin} className="btn btn-danger mb-4 fw-bold shadow-sm">Actualizar PIN</button>
+                  <button onClick={handleCambiarPin} className="btn btn-danger mb-5 fw-bold shadow-sm">Actualizar PIN</button>
 
-                  <hr className="border-secondary"/>
-
-                  <h6 className="fw-bold mt-4">Correo de Alertas</h6>
-                  <p className="text-secondary small">A este correo llegarán los avisos de intrusión y cortes de caja.</p>
-                  <div className="mb-3">
-                    <input 
-                      type="email" 
-                      className="form-control bg-dark text-white border-secondary" 
-                      placeholder="ejemplo@correo.com"
-                      value={correoAlertas}
-                      onChange={(e) => setCorreoAlertas(e.target.value)}
-                    />
-                  </div>
-                  <button onClick={handleGuardarCorreo} className="btn btn-success fw-bold shadow-sm">Guardar Correo</button>
+                  <h6 className="fw-bold">Correo de Alertas</h6>
+                  <input type="email" className={inputClass} value={correoAlertas} onChange={(e) => setCorreoAlertas(e.target.value)} />
+                  <button onClick={handleGuardarCorreo} className={`btn btn-${colorPrincipal} mt-3 fw-bold shadow-sm`}>Actualizar Correo</button>
                 </div>
               )}
 
               {seccionActiva === 'apariencia' && (
-                <div>
-                  <h4 className="mb-4 text-success fw-bold">Personalización Visual</h4>
-                  <p className="text-secondary">Próximamente... (Aquí pondremos el modo oscuro/claro y los colores)</p>
+                <div className="animate__animated animate__fadeIn">
+                  <h4 className={`mb-4 fw-bold text-${colorPrincipal}`}>Personalización Visual</h4>
+                  <div className="mb-4">
+                    <label className="form-label fw-bold text-secondary">Modo de Pantalla</label>
+                    <div className="d-flex gap-3">
+                      <button className={`btn px-4 py-2 fw-bold ${temaLocal === 'claro' ? 'btn-light text-dark shadow border-secondary' : 'btn-outline-secondary'}`} onClick={() => setTemaLocal('claro')}>☀️ Claro</button>
+                      <button className={`btn px-4 py-2 fw-bold ${temaLocal === 'oscuro' ? 'btn-dark shadow border-light' : 'btn-outline-secondary'}`} onClick={() => setTemaLocal('oscuro')}>🌙 Oscuro</button>
+                    </div>
+                  </div>
+                  <div className="mb-5">
+                    <label className="form-label fw-bold text-secondary">Color Principal (Incluye Naranja 🐈)</label>
+                    <div className="d-flex gap-3 flex-wrap">
+                      {['success', 'primary', 'danger', 'warning', 'info', 'orange'].map(color => (
+                        <div 
+                          key={color} onClick={() => setColorLocal(color)}
+                          className={`rounded-circle bg-${color} shadow cursor-pointer`}
+                          style={{ 
+                            width: '50px', height: '50px',
+                            border: colorLocal === color ? '4px solid #888' : 'none',
+                            opacity: colorLocal === color ? '1' : '0.4',
+                            transform: colorLocal === color ? 'scale(1.1)' : 'scale(1)',
+                            transition: 'all 0.2s'
+                          }}
+                        ></div>
+                      ))}
+                    </div>
+                  </div>
+                  <button onClick={handleGuardarApariencia} className={`btn btn-${colorPrincipal} px-4 fw-bold shadow-sm`}>Aplicar Apariencia</button>
                 </div>
               )}
-
             </div>
           </div>
         </div>
