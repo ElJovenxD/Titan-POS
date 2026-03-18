@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import { TiendaContext } from '../context/TiendaContext'; // <-- Importamos la nube
 
 function PantallaBloqueo({ onDesbloquear }) {
+  // Bajar el nombre Y EL ÍCONO de la nube
+  const { nombreTienda, iconoTienda } = useContext(TiendaContext); 
   const [pinIngresado, setPinIngresado] = useState('');
 
   const presionarTecla = (numero) => {
-    if (pinIngresado.length < 6) { // Límite de 6 dígitos
+    if (pinIngresado.length < 6) {
       setPinIngresado(prev => prev + numero);
     }
   };
@@ -22,12 +25,7 @@ function PantallaBloqueo({ onDesbloquear }) {
         onDesbloquear();
       } else {
         Swal.fire({
-          toast: true,
-          position: 'top',
-          icon: 'error',
-          title: 'PIN Incorrecto',
-          showConfirmButton: false,
-          timer: 1500
+          toast: true, position: 'top', icon: 'error', title: 'PIN Incorrecto', showConfirmButton: false, timer: 1500
         });
         setPinIngresado('');
       }
@@ -39,7 +37,17 @@ function PantallaBloqueo({ onDesbloquear }) {
 
   return (
     <div className="d-flex flex-column justify-content-center align-items-center vh-100 bg-dark text-white" style={{ position: 'fixed', top: 0, left: 0, width: '100%', zIndex: 9999 }}>
-      <h1 className="fw-bold mb-2">🏪 Los Chilangos</h1>
+      
+      {/* AQUÍ ESTÁ LA MAGIA: Dibujamos el ícono y el nombre juntos */}
+      <h1 className="fw-bold mb-2 d-flex align-items-center justify-content-center gap-3">
+        {iconoTienda.startsWith('data:image') ? (
+          <img src={iconoTienda} alt="Logo" style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
+        ) : (
+          <span>{iconoTienda}</span>
+        )}
+        {nombreTienda}
+      </h1>
+      
       <p className="text-secondary mb-4">Ingresa tu PIN para continuar</p>
 
       {/* Pantallita del PIN */}

@@ -1,4 +1,4 @@
-package com.tienda.backend.dto;
+package com.tienda.backend.model;
 
 import lombok.Data;
 

@@ -1,17 +1,21 @@
-import React from 'react';
+import React, { useContext } from 'react';
+import { TiendaContext } from '../context/TiendaContext'; // <-- Importamos la nube
 
 const TicketVenta = React.forwardRef(({ venta, detalles }, ref) => {
+  const { nombreTienda, iconoTienda } = useContext(TiendaContext); // <-- Extraemos el nombre de la tienda desde el contexto
+
   return (
-    // El div con el REF siempre debe renderizarse, aunque esté vacío temporalmente
     <div ref={ref} className="p-3 text-dark bg-white" style={{ width: '300px', fontSize: '12px', fontFamily: 'monospace' }}>
       
-      {/* Solo pintamos el contenido si "venta" ya trae datos */}
       {venta ? (
         <>
           <div className="text-center mb-2">
-            <h5 className="fw-bold m-0">🏪 LOS CHILANGOS</h5>
+            {/* AQUÍ PONEMOS EL NOMBRE DINÁMICO */}
+            <h5 className="fw-bold m-0 text-uppercase">
+              {!iconoTienda.startsWith('data:image') && <span>{iconoTienda} </span>}
+              {nombreTienda}
+            </h5>
             <p className="m-0">¡Calidad y Confianza!</p>
-            {/* Ojo: en tu Java le pusimos fechaVenta, no fecha */}
             <p className="small">{new Date(venta.fechaVenta || venta.fecha).toLocaleString()}</p>
           </div>
           
@@ -27,7 +31,6 @@ const TicketVenta = React.forwardRef(({ venta, detalles }, ref) => {
             </thead>
             <tbody>
               {detalles.map((d, i) => {
-                // Como le pasas el carrito directo, la propiedad es precioVenta
                 const precio = d.precioVenta || d.precioUnitario || 0;
                 return (
                   <tr key={i}>
@@ -49,6 +52,7 @@ const TicketVenta = React.forwardRef(({ venta, detalles }, ref) => {
 
           <div className="text-center mt-4">
             <p className="m-0">Gracias por su preferencia</p>
+            {/* Opcional: También puedes hacer dinámico el nombre del dueño si gustas después */}
             <p className="small">José de Jesús Martín Zúñiga</p>
           </div>
         </>

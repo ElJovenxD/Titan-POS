@@ -68,3 +68,22 @@ CREATE TABLE compras (
     fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     proveedor_id INTEGER REFERENCES proveedores(id)
 );
+
+CREATE TABLE configuracion (
+    id SERIAL PRIMARY KEY,
+    pin_actual VARCHAR(10) NOT NULL,
+    correo_alertas VARCHAR(150) NOT NULL
+);
+
+-- Insertamos la configuración inicial (Solo habrá 1 fila siempre)
+INSERT INTO configuracion (pin_actual, correo_alertas) VALUES ('1234', 'eviljjmz@gmail.com');
+
+ALTER TABLE configuracion ADD COLUMN nombre_tienda VARCHAR(100) DEFAULT 'Los Chilangos';
+
+-- Para asegurarnos de que la fila 1 tenga el nombre correcto:
+UPDATE configuracion SET nombre_tienda = 'Los Chilangos' WHERE id = 1;
+
+ALTER TABLE configuracion ADD COLUMN icono_tienda VARCHAR(255) DEFAULT '🏪';
+UPDATE configuracion SET icono_tienda = '🏪' WHERE id = 1;
+
+ALTER TABLE configuracion ALTER COLUMN icono_tienda TYPE TEXT;

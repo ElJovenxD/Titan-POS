@@ -1,19 +1,15 @@
-package com.tienda.backend.controller;
+package com.tienda.backend.model;
 
-import com.tienda.backend.model.Producto;
-import com.tienda.backend.model.Venta;
-import com.tienda.backend.model.VentaDetalle;
 import com.tienda.backend.repository.ProductoRepository;
 import com.tienda.backend.repository.VentaDetalleRepository;
 import com.tienda.backend.repository.VentaRepository;
-import com.tienda.backend.dto.DetalleVentaDTO;
+import com.tienda.backend.model.DetalleVentaDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
+
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;

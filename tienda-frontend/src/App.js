@@ -14,6 +14,7 @@ import HistorialVentas from './pages/HistorialVentas';
 import Fiados from './pages/Fiados';
 import Compras from './pages/Compras';
 import CorteCaja from './pages/CorteCaja';
+import Ajustes from './pages/Ajustes';
 
 // Estilos
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -50,6 +51,7 @@ function App() {
               <Route path="/fiados" element={<Fiados />} />
               <Route path="/compras" element={<Compras />} />
               <Route path="/corte" element={<CorteCaja />} />
+              <Route path="/ajustes" element={<Ajustes />} />
             </Routes>
           </div>
         </div>

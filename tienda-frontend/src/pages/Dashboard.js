@@ -1,9 +1,11 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useContext } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { useNavigate } from 'react-router-dom';
+import { TiendaContext } from '../context/TiendaContext';
 
 function Dashboard() {
+  const { nombreTienda } = useContext(TiendaContext);
   const [productosBajos, setProductosBajos] = useState([]);
   const [visitasHoy, setVisitasHoy] = useState([]);
   const [datosVentas, setDatosVentas] = useState({ total_ventas: 0, total_ganancia: 0 });
@@ -75,7 +77,7 @@ function Dashboard() {
     <div className="d-flex justify-content-center align-items-center vh-100 bg-dark text-white">
       <div className="text-center">
         <div className="spinner-border text-primary mb-3"></div>
-        <p>Cargando resumen de Los Chilangos...</p>
+        <p>Cargando resumen de {nombreTienda}...</p>
       </div>
     </div>
   );
@@ -83,7 +85,7 @@ function Dashboard() {
   return (
     <div className="container-fluid pb-4 text-white bg-dark min-vh-100">
       <div className="d-flex justify-content-between align-items-center py-4">
-        <h2 className="fw-bold m-0">🏠 Resumen - Los Chilangos</h2>
+        <h2 className="fw-bold m-0">🏠 Resumen - {nombreTienda}</h2>
         <button className="btn btn-sm btn-outline-light" onClick={cargarDashboard}>🔄 Actualizar</button>
       </div>
       

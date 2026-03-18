@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { useReactToPrint } from 'react-to-print';
 import TicketVenta from '../components/TicketVenta';
+import { TiendaContext } from '../context/TiendaContext';
 
 function PuntoVenta() {
+  const { nombreTienda } = useContext(TiendaContext);
   const [productos, setProductos] = useState([]);
   const [carrito, setCarrito] = useState([]);
   const [filtro, setFiltro] = useState("");
@@ -100,7 +102,7 @@ function PuntoVenta() {
 
   return (
     <div className="container-fluid py-4">
-      <h2 className="mb-4 fw-bold text-dark">🛒 Punto de Venta - Los Chilangos</h2>
+      <h2 className="mb-4 fw-bold text-dark">🛒 Punto de Venta - {nombreTienda}</h2>
       
       <div className="row g-4">
         {/* BUSCADOR Y LISTA DE PRODUCTOS */}

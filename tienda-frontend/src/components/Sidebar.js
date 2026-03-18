@@ -1,22 +1,31 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
+import { TiendaContext } from '../context/TiendaContext'; // <-- Importamos la nube
 
 function Sidebar({ onBloquear }) {
-  // Estilo para cuando la opción está seleccionada
+  // Extraemos nombre E ÍCONO
+  const { nombreTienda, iconoTienda } = useContext(TiendaContext); 
+
   const activeClass = "nav-link text-white p-3 d-flex align-items-center shadow-sm bg-success rounded-3";
   const inactiveClass = "nav-link text-white-50 p-3 d-flex align-items-center";
 
   return (
     <div className="d-flex flex-column vh-100 bg-dark text-white shadow" style={{ width: '260px', position: 'sticky', top: 0 }}>
       {/* LOGO Y TITULO */}
-    <div className="p-4 mb-2 text-center border-bottom border-secondary">
-      <div className="d-flex align-items-center justify-content-center gap-2">
-        <span className="fs-3">🏪</span>
-        {/* Usamos un h4 normal con clase de color fija para que no cambie */}
-        <h4 className="fw-bold m-0 text-success">Los Chilangos</h4>
+      <div className="p-4 mb-2 text-center border-bottom border-secondary">
+        <div className="d-flex align-items-center justify-content-center gap-2">
+          
+          {/* AQUÍ REEMPLAZAMOS EL EMOJI DURO POR LA VARIABLE */}
+          {iconoTienda.startsWith('data:image') ? (
+            <img src={iconoTienda} alt="Logo" style={{ width: '35px', height: '35px', objectFit: 'contain', borderRadius: '5px' }} />
+          ) : (
+            <span className="fs-3">{iconoTienda}</span>
+          )}
+          
+          <h4 className="fw-bold m-0 text-success">{nombreTienda}</h4>
+        </div>
+        <small className="text-secondary opacity-75">Punto de Control</small>
       </div>
-      <small className="text-secondary opacity-75">Punto de Control</small>
-    </div>
 
       {/* MENÚ DE NAVEGACIÓN */}
       <nav className="nav nav-pills flex-column p-3 gap-2">
@@ -65,6 +74,10 @@ function Sidebar({ onBloquear }) {
 
         <NavLink to="/corte" className={({ isActive }) => isActive ? activeClass : inactiveClass}>
           <span className="me-3 fs-5">💳</span> Corte de Caja
+        </NavLink>
+
+        <NavLink to="/ajustes" className={({ isActive }) => isActive ? activeClass : inactiveClass}>
+          <span className="me-3 fs-5">⚙️</span> Ajustes
         </NavLink>
       </nav>
 

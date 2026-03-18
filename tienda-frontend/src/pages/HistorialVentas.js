@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import { TiendaContext } from '../context/TiendaContext';
 
 function HistorialVentas() {
+  const { nombreTienda, iconoTienda } = useContext(TiendaContext);
   const [ventas, setVentas] = useState([]);
   const [detalles, setDetalles] = useState([]);
   const [busqueda, setBusqueda] = useState("");
@@ -46,7 +48,10 @@ function HistorialVentas() {
         </head>
         <body>
           <div class="text-center">
-            <h2 style="margin:0">🏪 LOS CHILANGOS</h2>
+            <h2 className="fw-bold m-0 text-uppercase">
+              {!iconoTienda.startsWith('data:image') && <span>{iconoTienda} </span>}
+              {nombreTienda}
+            </h2>
             <p>¡Gracias por su preferencia!</p>
             <small>Folio: #V-${ventaSeleccionada.id}</small><br>
             <small>${new Date(ventaSeleccionada.fechaVenta).toLocaleString()}</small>
