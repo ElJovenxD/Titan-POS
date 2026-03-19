@@ -1,1 +1,7 @@
-src/main/resources/application.properties
+# Base de datos portable de Titan-POS
+DatosTienda/
+*.db
+*.mv.db
+target/
+node_modules/
+.DS_Store

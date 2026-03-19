@@ -12,6 +12,7 @@ public class Configuracion {
 
     private String pinActual;
     private String correoAlertas;
+    private String passwordCorreo;
 
     // NUEVA VARIABLE
     private String nombreTienda;
@@ -21,6 +22,10 @@ public class Configuracion {
     private String tema;
     @Column(name = "color_principal")
     private String colorPrincipal;
+
+
+    public String getPasswordCorreo() { return passwordCorreo; }
+    public void setPasswordCorreo(String passwordCorreo) { this.passwordCorreo = passwordCorreo; }
 
     public String getTema() { return tema; }
     public void setTema(String tema) { this.tema = tema; }

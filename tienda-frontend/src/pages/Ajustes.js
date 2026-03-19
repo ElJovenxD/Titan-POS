@@ -5,7 +5,7 @@ import { TiendaContext } from '../context/TiendaContext';
 
 function Ajustes() {
   // Extraemos las funciones 'set' del contexto para actualizar la UI en tiempo real
-  const { tema, colorPrincipal, setTema, setColorPrincipal, nombreTienda, iconoTienda } = useContext(TiendaContext);
+  const { tema, colorPrincipal, setTema, setColorPrincipal, setNombreTienda, setIconoTienda } = useContext(TiendaContext);
 
   const [seccionActiva, setSeccionActiva] = useState('negocio');
 
@@ -13,6 +13,7 @@ function Ajustes() {
   const [pinActual, setPinActual] = useState('');
   const [pinNuevo, setPinNuevo] = useState('');
   const [correoAlertas, setCorreoAlertas] = useState('');
+  const [passwordCorreo, setPasswordCorreo] = useState(''); // <-- Estado para la clave de 16 dígitos
   const [nombreTiendaLocal, setNombreTiendaLocal] = useState('');
   const [iconoTiendaLocal, setIconoTiendaLocal] = useState('🏪');
 
@@ -25,16 +26,18 @@ function Ajustes() {
   useEffect(() => {
     axios.get('http://localhost:8080/api/seguridad/obtener')
       .then(res => {
-        setNombreTiendaLocal(res.data.nombreTienda);
-        setIconoTiendaLocal(res.data.iconoTienda);
+        // Llenamos los estados locales para que los inputs no aparezcan vacíos
+        setNombreTiendaLocal(res.data.nombreTienda || '');
+        setIconoTiendaLocal(res.data.iconoTienda || '🏪');
         setTemaLocal(res.data.tema || 'oscuro');
         setColorLocal(res.data.colorPrincipal || 'success');
-        setCorreoAlertas(res.data.correoAlertas || '');
+        setCorreoAlertas(res.data.correoAlertas || ''); 
+        setPasswordCorreo(res.data.passwordCorreo || ''); // <-- Cargamos la clave guardada
       })
       .catch(err => console.error("Error al cargar la configuración", err));
   }, []);
 
-  // 1. Guardar Datos del Negocio (Requiere recarga para actualizar Sidebar/Login)
+  // 1. Guardar Datos del Negocio
   const handleGuardarNegocio = async () => {
     if (!nombreTiendaLocal.trim()) return Swal.fire('Atención', 'El nombre no puede estar vacío.', 'warning');
     try {
@@ -42,8 +45,12 @@ function Ajustes() {
         nombreTienda: nombreTiendaLocal, 
         iconoTienda: iconoTiendaLocal 
       });
-      Swal.fire({ title: '¡Actualizado!', text: res.data.mensaje, icon: 'success', timer: 1500, showConfirmButton: false })
-        .then(() => window.location.reload());
+      
+      // Actualizamos el contexto para que el Sidebar cambie sin recargar
+      setNombreTienda(nombreTiendaLocal);
+      setIconoTienda(iconoTiendaLocal);
+
+      Swal.fire({ title: '¡Actualizado!', text: res.data.mensaje, icon: 'success', timer: 1500, showConfirmButton: false });
     } catch (error) {
       Swal.fire('Error', 'No se pudo guardar el negocio.', 'error');
     }
@@ -53,13 +60,12 @@ function Ajustes() {
   const handleCambiarPin = async () => {
     if (pinActual.length !== 4 || pinNuevo.length !== 4) return Swal.fire('Atención', 'Deben ser 4 números.', 'warning');
     try {
-      const res = await axios.post('http://localhost:8080/api/seguridad/cambiar-pin', { pinActual, pinNuevo });
+      await axios.post('http://localhost:8080/api/seguridad/cambiar-pin', { pinActual, pinNuevo });
       Swal.fire({
         title: '¡PIN Cambiado!',
         text: 'Por seguridad, el sistema se bloqueará. Ingresa con tu nuevo PIN.',
         icon: 'success'
       }).then(() => {
-        // Forzamos la recarga para que el estado de 'bloqueado' en App.js vuelva a true
         window.location.reload(); 
       });
     } catch (error) {
@@ -67,36 +73,30 @@ function Ajustes() {
     }
   };
 
-  // 3. Guardar Correo
+  // 3. Guardar Correo y Contraseña de Aplicación (CORREGIDO)
   const handleGuardarCorreo = async () => {
     if (!correoAlertas.includes('@')) return Swal.fire('Atención', 'Ingresa un correo válido.', 'warning');
     try {
-      const res = await axios.post('http://localhost:8080/api/seguridad/actualizar-correo', { correo: correoAlertas });
-      Swal.fire('¡Actualizado!', res.data.mensaje, 'success');
+      // Enviamos ambos campos a Java
+      const res = await axios.post('http://localhost:8080/api/seguridad/actualizar-correo', { 
+        correo: correoAlertas,
+        password: passwordCorreo 
+      });
+      Swal.fire('¡Configuración Guardada!', res.data.mensaje, 'success');
     } catch (error) {
-      Swal.fire('Error', 'No se pudo guardar el correo.', 'error');
+      Swal.fire('Error', 'No se pudo guardar la configuración de alertas.', 'error');
     }
   };
 
-  // 4. Guardar Apariencia (SIN RECARGAR - Cambio instantáneo)
+  // 4. Guardar Apariencia
   const handleGuardarApariencia = async () => {
     try {
       await axios.post('http://localhost:8080/api/seguridad/actualizar-apariencia', {
         tema: temaLocal, colorPrincipal: colorLocal
       });
-      
-      // Actualizamos el Contexto Global inmediatamente
       setTema(temaLocal);
       setColorPrincipal(colorLocal);
-
-      Swal.fire({ 
-        toast: true, 
-        position: 'top-end', 
-        title: 'Apariencia aplicada 🐈🧡', 
-        icon: 'success', 
-        timer: 3000, 
-        showConfirmButton: false 
-      });
+      Swal.fire({ toast: true, position: 'top-end', title: 'Apariencia aplicada 🐈🧡', icon: 'success', timer: 3000, showConfirmButton: false });
     } catch (error) {
       Swal.fire('Error', 'No se pudo guardar la apariencia.', 'error');
     }
@@ -123,7 +123,7 @@ function Ajustes() {
     if (seccionActiva === seccion) {
       return `list-group-item list-group-item-action fw-bold active bg-${colorPrincipal} border-${colorPrincipal} text-white`;
     }
-    return `list-group-item list-group-item-action fw-bold ${tema === 'claro' ? 'bg-light text-secondary' : 'bg-dark text-secondary border-secondary'}`;
+    return `list-group-item list-group-item-action fw-bold ${tema === 'claro' ? 'bg-light text-secondary border-bottom' : 'bg-dark text-secondary border-secondary border-bottom'}`;
   };
 
   return (
@@ -188,9 +188,19 @@ function Ajustes() {
                   </div>
                   <button onClick={handleCambiarPin} className="btn btn-danger mb-5 fw-bold shadow-sm">Actualizar PIN</button>
 
-                  <h6 className="fw-bold">Correo de Alertas</h6>
-                  <input type="email" className={inputClass} value={correoAlertas} onChange={(e) => setCorreoAlertas(e.target.value)} />
-                  <button onClick={handleGuardarCorreo} className={`btn btn-${colorPrincipal} mt-3 fw-bold shadow-sm`}>Actualizar Correo</button>
+                  <hr className="border-secondary opacity-25 mb-4" />
+
+                  <h5 className="fw-bold mb-3">Configuración de Envío de Alertas</h5>
+                  <div className="mb-3">
+                    <label className="form-label text-secondary fw-bold">Tu Correo Gmail</label>
+                    <input type="email" className={inputClass} placeholder="ejemplo@gmail.com" value={correoAlertas} onChange={(e) => setCorreoAlertas(e.target.value)} />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label text-secondary fw-bold">Contraseña de Aplicación de Google</label>
+                    <input type="password" className={inputClass} placeholder="Clave de 16 dígitos" value={passwordCorreo} onChange={(e) => setPasswordCorreo(e.target.value)} />
+                    <small className="text-secondary">Esta clave permite que el sistema envíe alertas desde tu cuenta.</small>
+                  </div>
+                  <button onClick={handleGuardarCorreo} className={`btn btn-${colorPrincipal} mt-2 fw-bold shadow-sm px-4`}>Guardar Configuración de Correo</button>
                 </div>
               )}
 
@@ -205,7 +215,7 @@ function Ajustes() {
                     </div>
                   </div>
                   <div className="mb-5">
-                    <label className="form-label fw-bold text-secondary">Color Principal (Incluye Naranja 🐈)</label>
+                    <label className="form-label fw-bold text-secondary">Color Principal</label>
                     <div className="d-flex gap-3 flex-wrap">
                       {['success', 'primary', 'danger', 'warning', 'info', 'orange'].map(color => (
                         <div 

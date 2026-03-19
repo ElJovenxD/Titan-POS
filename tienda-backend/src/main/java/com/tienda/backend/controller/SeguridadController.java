@@ -17,14 +17,16 @@ import java.util.Map;
 public class SeguridadController {
 
     @Autowired
-    private JavaMailSender mailSender;
+    private com.tienda.backend.model.EmailService emailService;
 
     @Autowired
     private ConfiguracionRepository configRepo;
 
     // Función auxiliar para obtener siempre la configuración de la BD (fila 1)
+    // Función auxiliar BLINDADA para obtener siempre la configuración de la BD
     private Configuracion getConfiguracion() {
-        return configRepo.findById(1L).orElseThrow(() -> new RuntimeException("Configuración no encontrada"));
+        return configRepo.findAll().stream().findFirst()
+                .orElseThrow(() -> new RuntimeException("Configuración no encontrada"));
     }
 
     // --- NUEVO: ASISTENTE DE CONFIGURACIÓN INICIAL ---
@@ -44,6 +46,10 @@ public class SeguridadController {
         config.setNombreTienda(datos.get("nombreTienda"));
         config.setPinActual(datos.get("pinActual"));
         config.setCorreoAlertas(datos.get("correoAlertas"));
+
+        // <-- NUEVA LÍNEA: Guardamos la contraseña desde el inicio -->
+        config.setPasswordCorreo(datos.get("passwordCorreo"));
+
         config.setIconoTienda("🏪"); // Valores por defecto
         config.setTema("oscuro");
         config.setColorPrincipal("success");
@@ -75,8 +81,15 @@ public class SeguridadController {
         config.setPinActual(pinNuevo);
         configRepo.save(config);
 
+        // 2. Enviamos el correo usando el SERVICIO NUEVO
         new Thread(() -> {
-            enviarCorreoAlerta(pinNuevo, config.getCorreoAlertas());
+            String mensajeTexto = "Hola,\n\n" +
+                    "El PIN de acceso al sistema ha sido modificado exitosamente.\n\n" +
+                    "Nuevo PIN: " + pinNuevo + "\n" +
+                    "Fecha del cambio: " + LocalDateTime.now() + "\n\n" +
+                    "Si no fuiste tú, contacta a soporte técnico.";
+
+            emailService.enviarAlerta(mensajeTexto);
         }).start();
 
         return ResponseEntity.ok(java.util.Collections.singletonMap("mensaje", "PIN actualizado con éxito. Revisa tu correo."));
@@ -87,39 +100,22 @@ public class SeguridadController {
     public ResponseEntity<?> actualizarCorreo(@RequestBody Map<String, String> datos) {
         Configuracion config = getConfiguracion();
         String nuevoCorreo = datos.get("correo");
+        String nuevaPassword = datos.get("password"); // <-- Capturamos la clave de 16 dígitos
 
         if (nuevoCorreo == null || !nuevoCorreo.contains("@")) {
             return ResponseEntity.badRequest().body(java.util.Collections.singletonMap("error", "Formato de correo inválido."));
         }
 
-        // Actualizamos y GUARDAMOS en la Base de Datos
         config.setCorreoAlertas(nuevoCorreo);
-        configRepo.save(config);
 
-        return ResponseEntity.ok(java.util.Collections.singletonMap("mensaje", "Correo de alertas actualizado a: " + nuevoCorreo));
-    }
-
-    private void enviarCorreoAlerta(String nuevoPin, String correoDestino) {
-        // Validación extra: Si no hay correo, no intentamos enviar para evitar errores
-        if (correoDestino == null || correoDestino.isEmpty()) {
-            System.out.println("No hay correo configurado para enviar la alerta.");
-            return;
+        // Si el usuario escribió algo en el campo de contraseña, lo guardamos
+        if (nuevaPassword != null && !nuevaPassword.trim().isEmpty()) {
+            config.setPasswordCorreo(nuevaPassword);
         }
 
-        try {
-            SimpleMailMessage mensaje = new SimpleMailMessage();
-            mensaje.setTo(correoDestino);
-            mensaje.setSubject("🚨 ALERTA: Cambio de PIN en " + getConfiguracion().getNombreTienda());
-            mensaje.setText("Hola,\n\n" +
-                    "El PIN de acceso al sistema ha sido modificado exitosamente.\n\n" +
-                    "Nuevo PIN: " + nuevoPin + "\n" +
-                    "Fecha del cambio: " + LocalDateTime.now() + "\n\n" +
-                    "Si no fuiste tú, contacta a soporte técnico.");
+        configRepo.save(config); // <-- Esto es lo que quita el [null] de pgAdmin
 
-            mailSender.send(mensaje);
-        } catch (Exception e) {
-            System.err.println("Error al enviar correo: " + e.getMessage());
-        }
+        return ResponseEntity.ok(java.util.Collections.singletonMap("mensaje", "Configuración de alertas actualizada exitosamente."));
     }
 
     // --- OBTENER TODA LA CONFIGURACIÓN ---
