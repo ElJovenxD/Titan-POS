@@ -105,7 +105,7 @@ public class VentaController {
                 "FROM ventas v " +
                 "JOIN detalle_ventas vd ON v.id = vd.venta_id " +
                 "JOIN productos p ON vd.producto_id = p.id " +
-                "WHERE v.fecha_venta >= CURRENT_DATE - INTERVAL '7 days' " +
+                "WHERE v.fecha_venta >= DATEADD(DAY, -7, CURRENT_DATE) " +
                 "GROUP BY CAST(v.fecha_venta AS DATE) " +
                 "ORDER BY fecha ASC";
 
